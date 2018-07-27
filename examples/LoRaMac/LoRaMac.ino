@@ -48,112 +48,121 @@ packed_t packed;
 
 void setup() 
 {
-    Serial.begin(115200);
+    DEBUG.begin(DEBUG_BAUD);
     delay(1000);
     pinMode(LORA_LED, OUTPUT);
 
-    Serial.println("Run");
+    DEBUG.println("Run");
 
     for(uint8_t i=0; i<sizeof(packed.ppm)/sizeof(uint16_t); i++) packed.ppm[i] = 1000;
     packed.addr = 100;
     packed.rssi = 0;
     
     // Radio initialization
-    RadioEvents.TxDone    = OnTxDone;
-    RadioEvents.RxDone    = OnRxDone;
-    RadioEvents.TxTimeout = OnTxTimeout;
-    RadioEvents.RxTimeout = OnRxTimeout;
-    RadioEvents.RxError   = OnRxError;
-
-    Serial.print("Init Radio...");
+    DEBUG.print("Init Radio...");
+    RadioEvents.TxDone            = OnTxDone;
+    RadioEvents.RxDone            = OnRxDone;
+    RadioEvents.RxError           = OnRxError;
+    RadioEvents.TxTimeout         = OnTxTimeout;
+    RadioEvents.RxTimeout         = OnRxTimeout;
+    RadioEvents.CadDone           = onCadDone;
+    RadioEvents.FhssChangeChannel = OnFhssChangeChannel;
     Radio.initIRQ(LORA_DIO0, LORA_DIO1, LORA_DIO2, LORA_DIO3, LORA_DIO4, LORA_DIO5);
     Radio.initDIO(LORA_NSS, LORA_RST, LORA_CTRL, LORA_VDD);
     Radio.init(&RadioSPI, &RadioEvents);
-    Serial.println("OK!");
+    DEBUG.println("OK!");
 
-    Serial.println("Config Radio :");
+    DEBUG.print("Set channel from HoppingFrequencies[0] : ");
+    DEBUG.print(HoppingFrequencies[0]);
+    Radio.SetChannel( HoppingFrequencies[0] );
+    DEBUG.println(" OK!");
+
+    DEBUG.println("Config Radio :");
 #if defined( USE_MODEM_LORA )
 
-    Serial.println("-----------------------------");
-    Serial.print  ("- MODE            : "); Serial.println("LORA");
-    Serial.print  ("- RF_FREQUENCY    : "); Serial.println(RF_FREQUENCY);
-    Serial.print  ("- POWER           : "); Serial.println(TX_OUTPUT_POWER);
-    Serial.print  ("- BANDWIDTH       : "); Serial.println(LORA_BANDWIDTH);
-    Serial.print  ("- CODINGRATE      : "); Serial.println(LORA_CODINGRATE);
-    Serial.print  ("- SPREADING_FACTOR: "); Serial.println(LORA_SPREADING_FACTOR);
-    Serial.print  ("- PREAMBLE_LENGTH : "); Serial.println(LORA_PREAMBLE_LENGTH);
-    Serial.print  ("- FIX_LENGTH_ON   : "); Serial.println(LORA_FIX_LENGTH_PAYLOAD_ON);
-    Serial.print  ("- IQ_INVERSION_ON : "); Serial.println(LORA_IQ_INVERSION_ON);
-    Serial.println("-----------------------------");
-    Serial.println();
+    DEBUG.println("-----------------------------");
+    DEBUG.print  ("- MODE            : "); DEBUG.println("LORA");
+    DEBUG.print  ("- RF_FREQUENCY    : "); DEBUG.println(RF_FREQUENCY);
+    DEBUG.print  ("- POWER           : "); DEBUG.println(TX_OUTPUT_POWER);
+    DEBUG.print  ("- BANDWIDTH       : "); DEBUG.println(LORA_BANDWIDTH);
+    DEBUG.print  ("- CODINGRATE      : "); DEBUG.println(LORA_CODINGRATE);
+    DEBUG.print  ("- SPREADING_FACTOR: "); DEBUG.println(LORA_SPREADING_FACTOR);
+    DEBUG.print  ("- PREAMBLE_LENGTH : "); DEBUG.println(LORA_PREAMBLE_LENGTH);
+    DEBUG.print  ("- FIX_LENGTH_ON   : "); DEBUG.println(LORA_FIX_LENGTH_PAYLOAD_ON);
+    DEBUG.print  ("- IQ_INVERSION_ON : "); DEBUG.println(LORA_IQ_INVERSION_ON);
+    DEBUG.println("-----------------------------");
+    DEBUG.println();
     
-    Serial.print("Set TX config... ");
+    DEBUG.print("Set TX config... ");
     Radio.SetTxConfig( MODEM_LORA, TX_OUTPUT_POWER, 0, LORA_BANDWIDTH,
                                    LORA_SPREADING_FACTOR, LORA_CODINGRATE,
                                    LORA_PREAMBLE_LENGTH, LORA_FIX_LENGTH_PAYLOAD_ON,
-                                   true, 0, 0, LORA_IQ_INVERSION_ON, LORA_TIMEOUT );
-    Serial.println("OK!");
+                                   LORA_CRC_ENABLED, LORA_FHSS_ENABLED, LORA_NB_SYMB_HOP,
+                                   LORA_IQ_INVERSION_ON, LORA_TIMEOUT );
+    DEBUG.println("OK!");
 
-    Serial.print("Set RX config... ");
+    DEBUG.print("Set RX config... ");
     Radio.SetRxConfig( MODEM_LORA, LORA_BANDWIDTH, LORA_SPREADING_FACTOR,
                                    LORA_CODINGRATE, 0, LORA_PREAMBLE_LENGTH,
-                                   LORA_SYMBOL_TIMEOUT, LORA_FIX_LENGTH_PAYLOAD_ON,
-                                   0, true, 0, 0, LORA_IQ_INVERSION_ON, true );
-    Serial.println("OK!");
+                                   LORA_SYMBOL_TIMEOUT, LORA_FIX_LENGTH_PAYLOAD_ON, 0,
+                                   LORA_CRC_ENABLED, LORA_FHSS_ENABLED, LORA_NB_SYMB_HOP,
+                                   LORA_IQ_INVERSION_ON, true );
+    DEBUG.println("OK!");
 
 #elif defined( USE_MODEM_FSK )
 
-    Serial.println("-----------------------------");
-    Serial.print  ("- MODE            : "); Serial.println("FSK");
-    Serial.print  ("- RF_FREQUENCY    : "); Serial.println(RF_FREQUENCY);
-    Serial.print  ("- POWER           : "); Serial.println(TX_OUTPUT_POWER);
-    Serial.print  ("- FDEV            : "); Serial.println(FSK_FDEV);
-    Serial.print  ("- DATARATE        : "); Serial.println(FSK_DATARATE);
-    Serial.print  ("- BANDWIDTH       : "); Serial.println(FSK_BANDWIDTH);
-    Serial.print  ("- AFC_BANDWIDTH   : "); Serial.println(FSK_AFC_BANDWIDTH);
-    Serial.print  ("- PREAMBLE_LENGTH : "); Serial.println(FSK_PREAMBLE_LENGTH);
-    Serial.print  ("- FIX_LENGTH_ON   : "); Serial.println(FSK_FIX_LENGTH_PAYLOAD_ON);
-    Serial.println("-----------------------------");
-    Serial.println();
+    DEBUG.println("-----------------------------");
+    DEBUG.print  ("- MODE            : "); DEBUG.println("FSK");
+    DEBUG.print  ("- RF_FREQUENCY    : "); DEBUG.println(RF_FREQUENCY);
+    DEBUG.print  ("- POWER           : "); DEBUG.println(TX_OUTPUT_POWER);
+    DEBUG.print  ("- FDEV            : "); DEBUG.println(FSK_FDEV);
+    DEBUG.print  ("- DATARATE        : "); DEBUG.println(FSK_DATARATE);
+    DEBUG.print  ("- BANDWIDTH       : "); DEBUG.println(FSK_BANDWIDTH);
+    DEBUG.print  ("- AFC_BANDWIDTH   : "); DEBUG.println(FSK_AFC_BANDWIDTH);
+    DEBUG.print  ("- PREAMBLE_LENGTH : "); DEBUG.println(FSK_PREAMBLE_LENGTH);
+    DEBUG.print  ("- FIX_LENGTH_ON   : "); DEBUG.println(FSK_FIX_LENGTH_PAYLOAD_ON);
+    DEBUG.println("-----------------------------");
+    DEBUG.println();
 
-    Serial.print("Set TX config... ");
+    DEBUG.print("Set TX config... ");
     Radio.SetTxConfig( MODEM_FSK, TX_OUTPUT_POWER, FSK_FDEV, 0,
                                   FSK_DATARATE, 0,
                                   FSK_PREAMBLE_LENGTH, FSK_FIX_LENGTH_PAYLOAD_ON,
-                                  true, 0, 0, 0, FSK_TIMEOUT );
-    Serial.println("OK!");
+                                  FSK_CRC_ENABLED, 0, 0, 0, FSK_TIMEOUT );
+    DEBUG.println("OK!");
                                   
-    Serial.print("Set RX config... ");
+    DEBUG.print("Set RX config... ");
     Radio.SetRxConfig( MODEM_FSK, FSK_BANDWIDTH, FSK_DATARATE,
                                0, FSK_AFC_BANDWIDTH, FSK_PREAMBLE_LENGTH,
-                               0, FSK_FIX_LENGTH_PAYLOAD_ON, 0, true,
+                               0, FSK_FIX_LENGTH_PAYLOAD_ON, 0, FSK_CRC_ENABLED,
                                0, 0, false, true );
-    Serial.println("OK!");
+    DEBUG.println("OK!");
 #else
     #error "Please define a radio mode in RF_config.h"
 #endif
 
+//#if defined RF_FREQUENCY
+//    DEBUG.print("Set frequency... ");
+//    Radio.SetChannel( RF_FREQUENCY );
+//    DEBUG.println("OK!");
+//#else
+//    #error "Please define a frequency band in RF_config.h"
+//#endif
 
-#if defined RF_FREQUENCY
-    Serial.print("Set frequency... ");
-    Radio.SetChannel( RF_FREQUENCY );
-    Serial.println("OK!");
-#else
-    #error "Please define a frequency band in RF_config.h"
-#endif
 
+//    uint8_t role = 0; // 0 - reciever; 1- transmitter
+//    if(role) {
+//      DEBUG.print("Start transmit... ");
+//      packed.rssi = 100;
+//      Radio.Send( (uint8_t*)&packed, sizeof(packed) );
+//      packed.rssi = 0;
+//    } else {
+//      DEBUG.print("Start recieve... ");
+//      Radio.Rx( RX_TIMEOUT_VALUE );
+//    }
+//    DEBUG.println("OK!");
 
-    uint8_t role = 0; // 0 - reciever; 1- transmitter
-    if(role) {
-      Serial.print("Start transmit... ");
-      packed.rssi = 100;
-      Radio.Send( (uint8_t*)&packed, sizeof(packed) );
-      packed.rssi = 0;
-    } else {
-      Serial.print("Start recieve... ");
-      Radio.Rx( RX_TIMEOUT_VALUE );
-    }
-    Serial.println("OK!");
+    Radio.Rx( RX_TIMEOUT_VALUE );
 }
 
 void loop() {
@@ -170,31 +179,31 @@ void loop() {
   static uint32_t lastMillis = 0;
   if(millis() - lastMillis >= 1000) {
     digitalWrite(LORA_LED, !digitalRead(LORA_LED));
-    Serial.print("cycle_count: "); Serial.println(cycle_count);
+    DEBUG.print("cycle_count: "); DEBUG.println(cycle_count);
     cycle_count = 0;
     if(rx_count) {
-      Serial.print("rx_count  : "); Serial.println(rx_count);
+      DEBUG.print("rx_count  : "); DEBUG.println(rx_count);
     }
     if(tx_count) {
-      Serial.print("tx_count  : "); Serial.println(tx_count);
+      DEBUG.print("tx_count  : "); DEBUG.println(tx_count);
     }
     if(rx_error) {
-      Serial.print("rx_error  : "); Serial.println(rx_error);
+      DEBUG.print("rx_error  : "); DEBUG.println(rx_error);
     }
     if(tx_timeout) {
-      Serial.print("tx_timeout: "); Serial.println(tx_timeout);
+      DEBUG.print("tx_timeout: "); DEBUG.println(tx_timeout);
     }
     if(packed.rssi) {
-      Serial.print("RSSI      : "); Serial.println(packed.rssi);
-      Serial.print("Bitrate   : "); Serial.println(sizeof(packed)*8000/timeOnAir);
-      Serial.print("Packed/s  : "); Serial.println(1000/timeOnAir);
-      Serial.print("TimeOnAir : "); Serial.println(timeOnAir);
-      Serial.print("Packeds   : "); Serial.println(packeds);
-      Serial.print("Packed    : ");
+      DEBUG.print("RSSI      : "); DEBUG.println(packed.rssi);
+      DEBUG.print("Bitrate   : "); DEBUG.println(sizeof(packed)*8000/timeOnAir);
+      DEBUG.print("Packed/s  : "); DEBUG.println(1000/timeOnAir);
+      DEBUG.print("TimeOnAir : "); DEBUG.println(timeOnAir);
+      DEBUG.print("Packeds   : "); DEBUG.println(packeds);
+      DEBUG.print("Packed    : ");
       for(uint8_t i=0; i<sizeof(packed.ppm)/sizeof(uint16_t); i++) {
-        Serial.print("["); Serial.print(packed.ppm[i]); Serial.print("]");
+        DEBUG.print("["); DEBUG.print(packed.ppm[i]); DEBUG.print("]");
       }
-      Serial.println();
+      DEBUG.println();
       packed.rssi = 100;
       packeds = 0;
     }
@@ -203,49 +212,49 @@ void loop() {
 
   Radio.handle();
 
-  switch( State ) {
-
-      case RADIO_RX_DONE :
-          timeOnAir = millis() - lastPackedMillis;
-          lastPackedMillis = millis();
-          packeds++;
-          rx_count++;
-          rx_error = 0;
-          
-          Radio.Rx( RX_TIMEOUT_VALUE );
-          State = RADIO_LOWPOWER;
-          break;
-          
-      case RADIO_TX_DONE :
-          tx_count++;
-          tx_timeout = 0;
-          packed.rssi = 100;
-          Radio.Send( (uint8_t*)&packed, sizeof(packed) );
-          packed.rssi = 0;
-          State = RADIO_LOWPOWER;
-          break;
-      
-      case RADIO_RX_TIMEOUT :
-      case RADIO_RX_ERROR :
-          rx_error++;
-          Radio.Rx( RX_TIMEOUT_VALUE );
-          State = RADIO_LOWPOWER;
-          break;
-      
-      case RADIO_TX_TIMEOUT :
-          tx_timeout++;
-          packed.rssi = 100;
-          Radio.Send( (uint8_t*)&packed, sizeof(packed) );
-          packed.rssi = 0;
-          State = RADIO_LOWPOWER;
-          break;
-
-      case RADIO_LOWPOWER :
-      default: break; // Set low power
-
-  }
-
-  return;
+//  switch( State ) {
+//
+//      case RADIO_RX_DONE :
+//          timeOnAir = millis() - lastPackedMillis;
+//          lastPackedMillis = millis();
+//          packeds++;
+//          rx_count++;
+//          rx_error = 0;
+//          
+//          Radio.Rx( RX_TIMEOUT_VALUE );
+//          State = RADIO_LOWPOWER;
+//          break;
+//          
+//      case RADIO_TX_DONE :
+//          tx_count++;
+//          tx_timeout = 0;
+//          packed.rssi = 100;
+//          Radio.Send( (uint8_t*)&packed, sizeof(packed) );
+//          packed.rssi = 0;
+//          State = RADIO_LOWPOWER;
+//          break;
+//      
+//      case RADIO_RX_TIMEOUT :
+//      case RADIO_RX_ERROR :
+//          rx_error++;
+//          Radio.Rx( RX_TIMEOUT_VALUE );
+//          State = RADIO_LOWPOWER;
+//          break;
+//      
+//      case RADIO_TX_TIMEOUT :
+//          tx_timeout++;
+//          packed.rssi = 100;
+//          Radio.Send( (uint8_t*)&packed, sizeof(packed) );
+//          packed.rssi = 0;
+//          State = RADIO_LOWPOWER;
+//          break;
+//
+//      case RADIO_LOWPOWER :
+//      default: break; // Set low power
+//
+//  }
+//
+//  return;
   
   //---------------------------------------------------
   
@@ -255,55 +264,40 @@ void loop() {
 
       case RADIO_RX_DONE :
         if( isMaster == true )
-          {
+        {
               if( BufferSize > 0 )
               {
-                  if( strncmp( ( const char* )Buffer, ( const char* )PongMsg, 4 ) == 0 )
-                  {
+                  if( strncmp( ( const char* )Buffer, ( const char* )PongMsg, 4 ) == 0 ) {
                       // Send the next PING frame
-                      Buffer[0] = 'P';
-                      Buffer[1] = 'I';
-                      Buffer[2] = 'N';
-                      Buffer[3] = 'G';
+                      strcpy( ( char* )Buffer, ( char* )PingMsg );
                       // We fill the buffer with numbers for the payload
-                      for( uint8_t i = 4; i < BufferSize; i++ )
-                      {
-                          Buffer[i] = i - 4;
-                      }
+                      for( uint8_t i = 4; i < BufferSize; i++ ) Buffer[i] = i - 4;
                       Radio.Send( Buffer, BufferSize );
                   }
-                  else if( strncmp( ( const char* )Buffer, ( const char* )PingMsg, 4 ) == 0 )
-                  { // A master already exists then become a slave
+                  else if( strncmp( ( const char* )Buffer, ( const char* )PingMsg, 4 ) == 0 ) {
+                      // A master already exists then become a slave
                       isMaster = false;
-                      Radio.Rx( RX_TIMEOUT_VALUE );
-                  }
-                  else // valid reception but neither a PING or a PONG message
-                  {    // Set device as master ans start again
+                      // Send the next PONG frame
+                      strcpy( ( char* )Buffer, ( char* )PongMsg );
+                      // We fill the buffer with numbers for the payload
+                      for( uint8_t i = 4; i < BufferSize; i++ ) Buffer[i] = i - 4;
+                      Radio.Send( Buffer, BufferSize );
+                  } else {
+                      // valid reception but neither a PING or a PONG message
+                      // Set device as master ans start again
                       isMaster = true;
                       Radio.Rx( RX_TIMEOUT_VALUE );
                   }
               }
-          }
-          else
-          {
-              if( BufferSize > 0 )
-              {
-                  if( strncmp( ( const char* )Buffer, ( const char* )PingMsg, 4 ) == 0 )
-                  {
-                      // Send the reply to the PONG string
-                      Buffer[0] = 'P';
-                      Buffer[1] = 'O';
-                      Buffer[2] = 'N';
-                      Buffer[3] = 'G';
-                      // We fill the buffer with numbers for the payload
-                      for( uint8_t i = 4; i < BufferSize; i++ )
-                      {
-                          Buffer[i] = i - 4;
-                      }
+          } else {
+              if( BufferSize > 0 ) {
+                  if( strncmp( ( const char* )Buffer, ( const char* )PingMsg, 4 ) == 0 ) {
+                      strcpy( ( char* )Buffer, ( char* )PongMsg );
+                      for( uint8_t i = 4; i < BufferSize; i++ ) Buffer[i] = i - 4;
                       Radio.Send( Buffer, BufferSize );
-                  }
-                  else // valid reception but not a PING as expected
-                  {    // Set device as master and start again
+                  } else {
+                      // valid reception but not a PING as expected
+                      // Set device as master and start again
                       isMaster = true;
                       Radio.Rx( RX_TIMEOUT_VALUE );
                   }
@@ -321,24 +315,28 @@ void loop() {
           break;
           
       case RADIO_RX_TIMEOUT :
+          if( isMaster == true ) {
+              // Send the next PING frame
+              strcpy( ( char* )Buffer, ( char* )PingMsg );
+              for( uint8_t i = 4; i < BufferSize; i++ ) Buffer[i] = i - 4;
+              Radio.Send( Buffer, BufferSize );
+          } else {
+              Radio.Rx( RX_TIMEOUT_VALUE );
+          }
+          State = RADIO_LOWPOWER;
+          break;
           
       case RADIO_RX_ERROR :
-          if( isMaster == true )
-          {
+          if( isMaster == true ) {
               // Send the next PING frame
-              Buffer[0] = 'P';
-              Buffer[1] = 'I';
-              Buffer[2] = 'N';
-              Buffer[3] = 'G';
-              for( uint8_t i = 4; i < BufferSize; i++ )
-              {
-                  Buffer[i] = i - 4;
-              }
+              strcpy( ( char* )Buffer, ( char* )PingMsg );
+              for( uint8_t i = 4; i < BufferSize; i++ ) Buffer[i] = i - 4;
               Radio.Send( Buffer, BufferSize );
-          }
-          else
-          {
-              Radio.Rx( RX_TIMEOUT_VALUE );
+          } else {
+              // Send the next PONG frame
+              strcpy( ( char* )Buffer, ( char* )PongMsg );
+              for( uint8_t i = 4; i < BufferSize; i++ ) Buffer[i] = i - 4;
+              Radio.Send( Buffer, BufferSize );
           }
           rx_error++;
           State = RADIO_LOWPOWER;
@@ -349,8 +347,8 @@ void loop() {
           State = RADIO_LOWPOWER;
           break;
             
-      case RADIO_LOWPOWER :
-      default: break; // Set low power
+      case RADIO_LOWPOWER : break;
+      default: State = RADIO_LOWPOWER; break; // Set low power
   }
   
   cycle_count++;
@@ -359,16 +357,17 @@ void loop() {
 
 void OnTxDone( void )
 {
+    Radio.SetChannel( HoppingFrequencies[0] );
     Radio.Sleep( );
     State = RADIO_TX_DONE;
 }
 
 void OnRxDone( uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr )
 {
+    Radio.SetChannel( HoppingFrequencies[0] );
     Radio.Sleep( );
     BufferSize = size;
-    if(size==sizeof(packed)) memcpy( &packed, payload, size );
-    //memcpy( Buffer, payload, BufferSize );
+    memcpy( Buffer, payload, BufferSize );
     RssiValue = rssi;
     SnrValue = snr;
     State = RADIO_RX_DONE;
@@ -376,18 +375,36 @@ void OnRxDone( uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr )
 
 void OnTxTimeout( void )
 {
+    Radio.SetChannel( HoppingFrequencies[0] );
     Radio.Sleep( );
     State = RADIO_TX_TIMEOUT;
 }
 
 void OnRxTimeout( void )
 {
+    Radio.SetChannel( HoppingFrequencies[0] );
     Radio.Sleep( );
+    Buffer[BufferSize] = 0;
     State = RADIO_RX_TIMEOUT;
 }
 
 void OnRxError( void )
 {
+    Radio.SetChannel( HoppingFrequencies[0] );
     Radio.Sleep( );
     State = RADIO_RX_ERROR;
+}
+ 
+void OnFhssChangeChannel( uint8_t channelIndex )
+{
+    DEBUG.print("Change channel to HoppingFrequencies[");
+    DEBUG.print(channelIndex);
+    DEBUG.print("] : ");
+    DEBUG.print(HoppingFrequencies[channelIndex]);
+    Radio.SetChannel( HoppingFrequencies[channelIndex] );
+    DEBUG.println(" OK!");
+}
+
+void onCadDone( bool channelActivityDetected ) {
+    DEBUG.println("CadDone!");
 }

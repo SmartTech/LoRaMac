@@ -1,4 +1,7 @@
 
+#define DEBUG         Serial
+#define DEBUG_BAUD    115200
+
 typedef struct __packed packed_s {
   uint64_t addr;
   uint16_t ppm[8];
@@ -11,8 +14,8 @@ typedef struct __packed packed_s {
 //------------------------------------------------
 
 #define TX_OUTPUT_POWER     20 // dBm
-#define RX_TIMEOUT_VALUE    50 // ms
-#define BUFFER_SIZE         64 // Define the payload size here
+#define RX_TIMEOUT_VALUE   100 // ms
+#define BUFFER_SIZE         32 // Define the payload size here
 
 //------------------------------------------------
 
@@ -25,7 +28,10 @@ typedef struct __packed packed_s {
 #define LORA_SYMBOL_TIMEOUT                         0         // Symbols
 #define LORA_FIX_LENGTH_PAYLOAD_ON                  true      // 
 #define LORA_IQ_INVERSION_ON                        false     // 
-#define LORA_TIMEOUT                                50        // ms
+#define LORA_FHSS_ENABLED                           true      // 
+#define LORA_NB_SYMB_HOP                            4         // 
+#define LORA_CRC_ENABLED                            true      //
+#define LORA_TIMEOUT                                100       // ms
 
 #elif defined( USE_MODEM_FSK )
 
@@ -35,7 +41,8 @@ typedef struct __packed packed_s {
 #define FSK_AFC_BANDWIDTH                           1000000   // Hz
 #define FSK_PREAMBLE_LENGTH                         5         // Same for Tx and Rx
 #define FSK_FIX_LENGTH_PAYLOAD_ON                   true      //
-#define FSK_TIMEOUT                                 50        // ms
+#define FSK_TIMEOUT                                 100       // ms
+#define FSK_CRC_ENABLED                             true      // 
 
 #else
     #error "Please define a modem in the compiler options."
@@ -51,8 +58,8 @@ typedef struct __packed packed_s {
 //#define REGION_EU868
 //#define REGION_KR920
 //#define REGION_IN865
-//#define REGION_US915
-#define REGION_RU864
+#define REGION_US915
+//#define REGION_RU864
 
 //------------------------------------------------
 #if defined( REGION_AS923 )
@@ -79,4 +86,72 @@ typedef struct __packed packed_s {
     #error "Please define a frequency band in the compiler options."
 #endif
 
+/*!
+ * Frequency hopping frequencies table
+ */
+const uint32_t HoppingFrequencies[] =
+{
+    916500000,
+    923500000,
+    906500000,
+    917500000,
+    917500000,
+    909000000,
+    903000000,
+    916000000,
+    912500000,
+    926000000,
+    925000000,
+    909500000,
+    913000000,
+    918500000,
+    918500000,
+    902500000,
+    911500000,
+    926500000,
+    902500000,
+    922000000,
+    924000000,
+    903500000,
+    913000000,
+    922000000,
+    926000000,
+    910000000,
+    920000000,
+    922500000,
+    911000000,
+    922000000,
+    909500000,
+    926000000,
+    922000000,
+    918000000,
+    925500000,
+    908000000,
+    917500000,
+    926500000,
+    908500000,
+    916000000,
+    905500000,
+    916000000,
+    903000000,
+    905000000,
+    915000000,
+    913000000,
+    907000000,
+    910000000,
+    926500000,
+    925500000,
+    911000000
+};
 
+#ifndef DEBUG
+struct {
+    template<typename... ARGS> void begin(ARGS...) {}
+    template<typename... ARGS> void print(ARGS...) {}
+    template<typename... ARGS> void println(ARGS...) {}
+    template<typename... ARGS> void printf(ARGS...) {}
+    template<typename... ARGS> void write(ARGS...) {}
+    template<typename... ARGS> int  available(ARGS...) {}
+    template<typename... ARGS> byte read(ARGS...) {}
+   } DEBUG;
+#endif
