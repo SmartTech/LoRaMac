@@ -1,6 +1,7 @@
 #include <radio.h>
 #include "RF_config.h"
 
+//#define LORA_LED    PB6
 #define LORA_LED    PB6
 #define LORA_BTN    PA0
 #define LORA_NSS    PB0
@@ -150,19 +151,19 @@ void setup()
 //#endif
 
 
-//    uint8_t role = 0; // 0 - reciever; 1- transmitter
-//    if(role) {
-//      DEBUG.print("Start transmit... ");
-//      packed.rssi = 100;
-//      Radio.Send( (uint8_t*)&packed, sizeof(packed) );
-//      packed.rssi = 0;
-//    } else {
-//      DEBUG.print("Start recieve... ");
-//      Radio.Rx( RX_TIMEOUT_VALUE );
-//    }
-//    DEBUG.println("OK!");
+    uint8_t role = 0; // 0 - reciever; 1- transmitter
+    if(role) {
+      DEBUG.print("Start transmit... ");
+      packed.rssi = 100;
+      Radio.Send( Buffer, BufferSize );
+      packed.rssi = 0;
+    } else {
+      DEBUG.print("Start recieve... ");
+      Radio.Rx( RX_TIMEOUT_VALUE );
+    }
+    DEBUG.println("OK!");
 
-    Radio.Rx( RX_TIMEOUT_VALUE );
+    //Radio.Rx( RX_TIMEOUT_VALUE );
 }
 
 void loop() {
@@ -174,41 +175,41 @@ void loop() {
   static uint32_t cycle_count = 0;
   static uint32_t lastPackedMillis = 0;
   static uint32_t timeOnAir   = 0;
-  static uint32_t packeds     = 0;
-
-  static uint32_t lastMillis = 0;
-  if(millis() - lastMillis >= 1000) {
-    digitalWrite(LORA_LED, !digitalRead(LORA_LED));
-    DEBUG.print("cycle_count: "); DEBUG.println(cycle_count);
-    cycle_count = 0;
-    if(rx_count) {
-      DEBUG.print("rx_count  : "); DEBUG.println(rx_count);
-    }
-    if(tx_count) {
-      DEBUG.print("tx_count  : "); DEBUG.println(tx_count);
-    }
-    if(rx_error) {
-      DEBUG.print("rx_error  : "); DEBUG.println(rx_error);
-    }
-    if(tx_timeout) {
-      DEBUG.print("tx_timeout: "); DEBUG.println(tx_timeout);
-    }
-    if(packed.rssi) {
-      DEBUG.print("RSSI      : "); DEBUG.println(packed.rssi);
-      DEBUG.print("Bitrate   : "); DEBUG.println(sizeof(packed)*8000/timeOnAir);
-      DEBUG.print("Packed/s  : "); DEBUG.println(1000/timeOnAir);
-      DEBUG.print("TimeOnAir : "); DEBUG.println(timeOnAir);
-      DEBUG.print("Packeds   : "); DEBUG.println(packeds);
-      DEBUG.print("Packed    : ");
-      for(uint8_t i=0; i<sizeof(packed.ppm)/sizeof(uint16_t); i++) {
-        DEBUG.print("["); DEBUG.print(packed.ppm[i]); DEBUG.print("]");
-      }
-      DEBUG.println();
-      packed.rssi = 100;
-      packeds = 0;
-    }
-    lastMillis = millis();
-  }
+//  static uint32_t packeds     = 0;
+//
+//  static uint32_t lastMillis = 0;
+//  if(millis() - lastMillis >= 1000) {
+//    DEBUG.print("cycle_count: "); DEBUG.println(cycle_count);
+//    cycle_count = 0;
+//    if(rx_count) {
+//      DEBUG.print("rx_count  : "); DEBUG.println(rx_count);
+//    }
+//    if(tx_count) {
+//      DEBUG.print("tx_count  : "); DEBUG.println(tx_count);
+//    }
+//    if(rx_error) {
+//      DEBUG.print("rx_error  : "); DEBUG.println(rx_error);
+//    }
+//    if(tx_timeout) {
+//      DEBUG.print("tx_timeout: "); DEBUG.println(tx_timeout);
+//    }
+//    DEBUG.print("TimeOnAir : "); DEBUG.println(timeOnAir);
+//    if(packed.rssi) {
+//      DEBUG.print("RSSI      : "); DEBUG.println(packed.rssi);
+//      DEBUG.print("Bitrate   : "); DEBUG.println(sizeof(packed)*8000/timeOnAir);
+//      DEBUG.print("Packed/s  : "); DEBUG.println(1000/timeOnAir);
+//      DEBUG.print("TimeOnAir : "); DEBUG.println(timeOnAir);
+//      DEBUG.print("Packeds   : "); DEBUG.println(packeds);
+//      DEBUG.print("Packed    : ");
+//      for(uint8_t i=0; i<sizeof(packed.ppm)/sizeof(uint16_t); i++) {
+//        DEBUG.print("["); DEBUG.print(packed.ppm[i]); DEBUG.print("]");
+//      }
+//      DEBUG.println();
+//      packed.rssi = 100;
+//      packeds = 0;
+//    }
+//    lastMillis = millis();
+//  }
 
   Radio.handle();
 
@@ -217,6 +218,7 @@ void loop() {
 //      case RADIO_RX_DONE :
 //          timeOnAir = millis() - lastPackedMillis;
 //          lastPackedMillis = millis();
+//          digitalWrite(LORA_LED, !digitalRead(LORA_LED));
 //          packeds++;
 //          rx_count++;
 //          rx_error = 0;
@@ -229,7 +231,7 @@ void loop() {
 //          tx_count++;
 //          tx_timeout = 0;
 //          packed.rssi = 100;
-//          Radio.Send( (uint8_t*)&packed, sizeof(packed) );
+//          Radio.Send( Buffer, BufferSize );
 //          packed.rssi = 0;
 //          State = RADIO_LOWPOWER;
 //          break;
@@ -244,7 +246,7 @@ void loop() {
 //      case RADIO_TX_TIMEOUT :
 //          tx_timeout++;
 //          packed.rssi = 100;
-//          Radio.Send( (uint8_t*)&packed, sizeof(packed) );
+//          Radio.Send( Buffer, BufferSize );
 //          packed.rssi = 0;
 //          State = RADIO_LOWPOWER;
 //          break;
@@ -263,6 +265,8 @@ void loop() {
   switch( State ) {
 
       case RADIO_RX_DONE :
+        timeOnAir = millis() - lastPackedMillis;
+        lastPackedMillis = millis();
         if( isMaster == true )
         {
               if( BufferSize > 0 )
@@ -371,6 +375,7 @@ void OnRxDone( uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr )
     RssiValue = rssi;
     SnrValue = snr;
     State = RADIO_RX_DONE;
+    digitalWrite(LORA_LED, !digitalRead(LORA_LED));
 }
 
 void OnTxTimeout( void )
@@ -384,7 +389,7 @@ void OnRxTimeout( void )
 {
     Radio.SetChannel( HoppingFrequencies[0] );
     Radio.Sleep( );
-    Buffer[BufferSize] = 0;
+    //Buffer[BufferSize] = 0;
     State = RADIO_RX_TIMEOUT;
 }
 
@@ -397,12 +402,13 @@ void OnRxError( void )
  
 void OnFhssChangeChannel( uint8_t channelIndex )
 {
-    DEBUG.print("Change channel to HoppingFrequencies[");
-    DEBUG.print(channelIndex);
-    DEBUG.print("] : ");
-    DEBUG.print(HoppingFrequencies[channelIndex]);
+    //DEBUG.print("Change channel to HoppingFrequencies[");
+    //DEBUG.print(channelIndex);
+    //DEBUG.print("] : ");
+    //DEBUG.print(HoppingFrequencies[channelIndex]);
     Radio.SetChannel( HoppingFrequencies[channelIndex] );
-    DEBUG.println(" OK!");
+    //digitalWrite(LORA_LED, !digitalRead(LORA_LED));
+    //DEBUG.println(" OK!");
 }
 
 void onCadDone( bool channelActivityDetected ) {
